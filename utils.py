@@ -8,9 +8,13 @@ def separate_xy(df, last_col_name):
     return X, y
 
 def mean_normalization(df):
-    
-    mean_normalization_df = df - df.mean() / df.std()
-    return mean_normalization_df
+
+    result = df.copy()
+    for feature_name in df.columns:
+        mean_value = df[feature_name].mean()
+        std_value  = df[feature_name].std()
+        result[feature_name] = (df[feature_name] - mean_value) / std_value
+    return result
 
 def min_max_normalization(df):
     result = df.copy()
