@@ -55,7 +55,6 @@ class LinearRegression:
             options={'maxiter': self.max_iter}) 
         self.beta = res.x
         self.beta_init = self.beta
-        print(self.beta)
 
 class RidgeRegression:
 
