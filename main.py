@@ -4,12 +4,11 @@ import pandas as pd
 from scipy.optimize import minimize
 from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
-from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 # Code
 from eda import pearson_corr_mat, get_corr_features
 from models import LinearRegression, RidgeRegression, LassoRegression, log_loss
-from utils import separate_xy, min_max_normalization, mean_normalization
+from utils import separate_xy, min_max_normalization, mean_normalization, vif_feature_selection
 
 ################################################################################
 # DATA PRE-PROCESSING
@@ -23,39 +22,33 @@ df_train = df_train.drop('date', axis=1)
 # FEATURE SELECTION
 ################################################################################
 
-# Select a subset of highly correlated-features
-relevant_features = [ 
-
-'fb-survey_smoothed_cli',
-'chng_smoothed_outpatient_covid',
-'hospital-admissions_smoothed_adj_covid19_from_claims',
-'safegraph_part_time_work_prop_7dav',
-'doctor-visits_smoothed_adj_cli',
-'quidel_covid_ag_smoothed_pct_positive',
-'response',
-'fb-survey_smoothed_wtravel_outside_state_5d'
-
-]
-
-df_train =  df_train[relevant_features]
-
 print()
 print('#######################################################################')
-print('VIF ANALYSIS')
+print('FEATURE SELECTION')
 print('#######################################################################')
 print()
 
-# VIF analysis to check for multicollinearity
-vif = pd.DataFrame()
-vif["features"] = df_train.columns
-vif["vif_Factor"] = [variance_inflation_factor(df_train.values, i) for i in range(df_train.shape[1])]
-print(vif)
+correlated_features = get_corr_features(df_train, 'response', 0.5)
+print(correlated_features)
+
+df_train = df_train[correlated_features]
+
+selected_features = vif_feature_selection(df_train, 10)
+print(selected_features)
+
+df_train = selected_features
+
+
+################################################################################
+# DATA PRE-PROCESSING
+################################################################################
+
+X_train, y_train = separate_xy(df_train, 'response')
+#X_train = min_max_normalization(X_train)
 
 ################################################################################
 # REGRESSION MODELS
 ################################################################################
-
-X_train, y_train = separate_xy(df_train, 'response')
 
 print()
 print('#######################################################################')
@@ -79,7 +72,7 @@ print('#######################################################################')
 print()
 
 ridge_reg = RidgeRegression(log_loss, X_train, y_train, max_iter=500, 
-    regularization=0.0001)
+    regularization=0.01)
 ridge_reg.fit()
 preds = ridge_reg.predict(X_train)
 print("Ridge regression beta vector: ")
@@ -95,12 +88,18 @@ print('#######################################################################')
 print()
 
 lasso_reg = LassoRegression(log_loss, X_train, y_train, max_iter=500, 
-    regularization=0.0001)
+    regularization=0.001)
 lasso_reg.fit()
-preds = lasso_reg.predict(X_train)
+y_pred = lasso_reg.predict(X_train)
 print("Lasso regression beta vector: ")
 print(lasso_reg.beta)
 print()
 print("Lasso regression loss: ")
-print(log_loss(preds, y_train))
+print(log_loss(y_pred, y_train))
 print()
+
+print("Predictions:")
+print(y_pred)
+
+print("Actual values:")
+print(y_train)
