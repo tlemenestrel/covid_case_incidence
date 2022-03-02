@@ -1,7 +1,6 @@
 # Libraries
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
 from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
 
@@ -14,8 +13,12 @@ from utils import separate_xy, min_max_normalization, mean_normalization, vif_fe
 # DATA PRE-PROCESSING
 ################################################################################
 
-# Read training data, split in X and y and drop date column
 df_train = pd.read_csv('train_data.csv')
+
+# Keep month and day and drop date
+df_train["date"]  = pd.to_datetime(df_train["date"])
+df_train["month"] = df_train['date'].dt.month
+df_train["day"]   = df_train['date'].dt.month
 df_train = df_train.drop('date', axis=1)
 
 ################################################################################
@@ -28,23 +31,22 @@ print('FEATURE SELECTION')
 print('#######################################################################')
 print()
 
-correlated_features = get_corr_features(df_train, 'response', 0.5)
-print(correlated_features)
-
+# Select features based on a correlation threshold
+correlated_features = get_corr_features(df_train, 'response', 0.55)
 df_train = df_train[correlated_features]
 
-selected_features = vif_feature_selection(df_train, 10)
-print(selected_features)
+print("Correlated features:")
+print(correlated_features)
 
-df_train = selected_features
-
-
-################################################################################
-# DATA PRE-PROCESSING
-################################################################################
-
+# Split data into x and y
 X_train, y_train = separate_xy(df_train, 'response')
-#X_train = min_max_normalization(X_train)
+
+# Select features based on VIF analysis
+selected_features = vif_feature_selection(X_train, 6)
+X_train = selected_features
+
+print("VIF selected features:")
+print(selected_features)
 
 ################################################################################
 # REGRESSION MODELS
@@ -58,12 +60,12 @@ print()
 
 linear_reg = LinearRegression(log_loss, X_train, y_train, max_iter=500)
 linear_reg.fit()
-preds = linear_reg.predict(X_train)
+y_pred_linear = linear_reg.predict(X_train)
 print("Linear regression beta vector: ")
 print(linear_reg.beta)
 print()
 print("Linear regression loss: ")
-print(log_loss(preds, y_train))
+print(log_loss(y_pred_linear, y_train))
 
 print()
 print('#######################################################################')
@@ -72,14 +74,14 @@ print('#######################################################################')
 print()
 
 ridge_reg = RidgeRegression(log_loss, X_train, y_train, max_iter=500, 
-    regularization=0.01)
+    regularization=0.1)
 ridge_reg.fit()
-preds = ridge_reg.predict(X_train)
+y_pred_ridge = ridge_reg.predict(X_train)
 print("Ridge regression beta vector: ")
 print(ridge_reg.beta)
 print()
 print("Ridge regression loss: ")
-print(log_loss(preds, y_train))
+print(log_loss(y_pred_ridge, y_train))
 
 print()
 print('#######################################################################')
@@ -88,18 +90,18 @@ print('#######################################################################')
 print()
 
 lasso_reg = LassoRegression(log_loss, X_train, y_train, max_iter=500, 
-    regularization=0.001)
+    regularization=0.1)
 lasso_reg.fit()
-y_pred = lasso_reg.predict(X_train)
+y_pred_lasso = lasso_reg.predict(X_train)
 print("Lasso regression beta vector: ")
 print(lasso_reg.beta)
 print()
 print("Lasso regression loss: ")
-print(log_loss(y_pred, y_train))
+print(log_loss(y_pred_lasso, y_train))
 print()
 
 print("Predictions:")
-print(y_pred)
+print(y_pred_linear)
 
 print("Actual values:")
 print(y_train)
