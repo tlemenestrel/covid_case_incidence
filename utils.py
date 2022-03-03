@@ -27,7 +27,7 @@ def min_max_normalization(df):
 
 def vif_feature_selection(df, threshold):
 
-    data = pd.DataFrame()
+    output = pd.DataFrame()
     k = df.shape[1]
     vif = [variance_inflation_factor(df.values, j) for j in range(df.shape[1])]
 
@@ -44,7 +44,10 @@ def vif_feature_selection(df, threshold):
             output = output.drop(output.columns[a], axis=1)
             vif = [variance_inflation_factor(output.values, j) for j in range(output.shape[1])]
 
-    return output
+    column_names = list(output)
+    print("Column names")
+    print(column_names)
+    return output.columns.values.tolist()
 
 def get_corr_features(
     df,
@@ -90,4 +93,3 @@ def pearson_corr_mat(
     print(relevant_features)
 
     return(relevant_features)
-    
