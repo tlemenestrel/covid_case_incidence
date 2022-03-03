@@ -21,6 +21,7 @@ df_train["date"]  = pd.to_datetime(df_train["date"])
 df_train["month"] = df_train['date'].dt.month
 df_train["day"]   = df_train['date'].dt.month
 df_train = df_train.drop('date', axis=1)
+df_train['county'] = df_train['county'].astype(str).str[:-3].astype(np.int64)
 df_train = pd.get_dummies(df_train, prefix=['county'], columns=['county'])
 
 ################################################################################
@@ -32,6 +33,8 @@ print('#######################################################################')
 print('FEATURE SELECTION')
 print('#######################################################################')
 print()
+
+X_train, y_train = separate_xy(df_train, 'response')
 
 '''
 print(df_train.head())
@@ -79,7 +82,7 @@ print('RIDGE REGRESSION')
 print('#######################################################################')
 print()
 
-ridge_reg = Ridge(alpha=10)
+ridge_reg = Ridge(alpha=1)
 ridge_reg.fit(X_train, y_train)
 y_pred_ridge = ridge_reg.predict(X_train)
 
