@@ -1,13 +1,11 @@
 # Libraries
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_squared_error
-from sklearn.decomposition import PCA
 
 # Code
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from models import log_loss
-from utils import separate_xy, min_max_normalization, mean_normalization, train_test_split
+from utils import separate_xy, vif_feature_selection, get_corr_features
 
 ################################################################################
 # DATA PRE-PROCESSING
@@ -39,7 +37,7 @@ assert(all(county_list_train  == county_list_val))
 df_list_train = []
 df_list_val   = []
 
-#Slice the train and val dataframe into lists of sub dataframes for each county.
+# Slice the train and val dataframe into lists of sub dataframes for each county.
 for county_code in county_list_train:
 
     train_sub_df = df_train.loc[df_train['county'] == county_code]
@@ -52,8 +50,22 @@ for county_code in county_list_train:
 df_list_train[0] = df_list_train[0].drop('date', axis=1)
 df_list_val[0]   = df_list_val[0].drop('date', axis=1)
 
+'''
+correlated_features = get_corr_features(df_list_train[0], 'response', 0.5)
+df_list_train[0] = df_list_train[0][correlated_features]
+df_list_val[0]   = df_list_val[0][correlated_features]
+print(correlated_features)
+'''
+
 X_train, y_train = separate_xy(df_list_train[0], 'response')
 X_val, y_val     = separate_xy(df_list_val[0], 'response')
+
+'''
+selected_features = vif_feature_selection(X_train, 10)
+X_train = X_train[selected_features]
+X_val   = X_val[selected_features]
+print(selected_features)
+'''
 
 ################################################################################
 # REGRESSION MODELS 
@@ -78,7 +90,7 @@ print('RIDGE REGRESSION')
 print('#######################################################################')
 print()
 
-ridge_reg = Ridge(alpha=10)
+ridge_reg = Ridge(alpha=0.005)
 ridge_reg.fit(X_train, y_train)
 y_pred_ridge = ridge_reg.predict(X_val)
 
@@ -91,7 +103,7 @@ print('LASSO REGRESSION')
 print('#######################################################################')
 print()
 
-lasso_reg = Lasso(alpha=0.00001)
+lasso_reg = Lasso(alpha=100)
 lasso_reg.fit(X_train, y_train)
 y_pred_lasso = lasso_reg.predict(X_val)
 
