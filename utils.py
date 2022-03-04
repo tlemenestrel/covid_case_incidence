@@ -44,10 +44,7 @@ def vif_feature_selection(df, threshold):
             output = output.drop(output.columns[a], axis=1)
             vif = [variance_inflation_factor(output.values, j) for j in range(output.shape[1])]
 
-    column_names = list(output)
-    print("Column names")
-    print(column_names)
-    return output.columns.values.tolist()
+    return list(output)
 
 def get_corr_features(
     df,
@@ -93,3 +90,59 @@ def pearson_corr_mat(
     print(relevant_features)
 
     return(relevant_features)
+
+def process_date_and_county(df):
+
+    save_train = df[['date', 'county']]
+
+    # Keep month and day and drop date
+    save_train["date"]  = pd.to_datetime(save_train["date"])
+    save_train["month"] = save_train['date'].dt.month
+    #save_train["day"]   = save_train['date'].dt.month
+    save_train = save_train.drop('date', axis=1)
+
+    # Counties
+    ### Remove last 3 digits of county
+    #save_train['county'] = save_train['county'].astype(str).str[:-3].astype(np.int64)
+    save_train = pd.get_dummies(save_train, prefix=['county'], columns=['county'])
+
+    return save_train
+
+def correlation_selection(df):
+
+    correlated_features = get_corr_features(df, 'response', 0)
+    df = df[correlated_features]
+
+    return df
+
+def vif_selection(X_train, threshold):
+
+    selected_features = vif_feature_selection(X_train, threshold)
+    X_train = X_train[selected_features]
+
+    return X_train
+
+def train_test_split(df, threshold_date):
+
+    # Shift the index by 1
+    df.index += 1     
+    df['date'] = pd.to_datetime(df['date'])
+
+    train_df, test_df = df[df.date<threshold_date], df[df.date>=threshold_date]
+    train_df = train_df.drop('Unnamed: 0', axis=1)
+    test_df  = test_df.drop('Unnamed: 0', axis=1)
+
+    train_df.to_csv('train_data.csv')
+    test_df.to_csv('val_data.csv')
+
+
+
+
+
+
+
+
+
+
+
+
