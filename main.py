@@ -24,17 +24,36 @@ df_val  = pd.read_csv('val_data.csv')
 ################################################################################
 
 # Make column to string and add leading zeroes that are removed when reading file
-df_train["county"] = df_train["county"].apply(str).str.zfill(5)
-df_val["county"]   = df_val["county"].apply(str).str.zfill(5)
+df_train['county'] = df_train['county'].apply(str).str.zfill(5)
+df_val['county']   =   df_val['county'].apply(str).str.zfill(5)
 
+# Get the list of unique counties
 county_list_train = df_train['county'].unique()
 county_list_val   = df_val['county'].unique()
 
+# Check that the counties are the same and in the same order
 assert(len(county_list_train) == len(county_list_val))
-assert(sorted(county_list_train)  == sorted(county_list_val))
-print(df_train.head())
-print(sorted(county_list_train))
-print(sorted(county_list_val))
+assert(all(county_list_train  == county_list_val))
+
+# Make lists to store the sub-dataframes
+df_list_train = []
+df_list_val   = []
+
+#Slice the train and val dataframe into lists of sub dataframes for each county.
+for county_code in county_list_train:
+
+    train_sub_df = df_train.loc[df_train['county'] == county_code]
+    df_list_train.append(train_sub_df)
+
+    val_sub_df   = df_val.loc[df_val['county'] == county_code]
+    df_list_val.append(val_sub_df)
+
+# Try to fit a separate model on the data for the first county
+df_list_train[0] = df_list_train[0].drop('date', axis=1)
+df_list_val[0]   = df_list_val[0].drop('date', axis=1)
+
+X_train, y_train = separate_xy(df_list_train[0], 'response')
+X_val, y_val     = separate_xy(df_list_val[0], 'response')
 
 ################################################################################
 # REGRESSION MODELS 
