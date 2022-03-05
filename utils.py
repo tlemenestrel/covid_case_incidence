@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 import pandas as pd
 from statsmodels.stats.outliers_influence import variance_inflation_factor
@@ -46,18 +47,18 @@ def process_date_and_county(df):
 
     return save_train
 
-def train_test_split(df, threshold_date):
+def train_test_split(df):
 
+    threshold_date = datetime(2020, 11, 1)
     # Shift the index by 1
     df.index += 1     
     df['date'] = pd.to_datetime(df['date'])
 
-    train_df, test_df = df[df.date<threshold_date], df[df.date>=threshold_date]
+    train_df, val_df = df[df.date<threshold_date], df[df.date>=threshold_date]
     train_df = train_df.drop('Unnamed: 0', axis=1)
-    test_df  = test_df.drop('Unnamed: 0', axis=1)
+    val_df  = val_df.drop('Unnamed: 0', axis=1)
 
-    train_df.to_csv('train_data.csv')
-    test_df.to_csv('val_data.csv')
+    return train_df, val_df
 
 ################################################################################
 # FEATURE SELECTION
