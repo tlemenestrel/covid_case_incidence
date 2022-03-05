@@ -96,44 +96,47 @@ X_val   = X_val[selected_features]
 print(selected_features)
 '''
 
-def run_models(X_train, y_train, X_val, y_val):
+def run_models(X_train, y_train, X_val, y_val, verbose=True):
     ################################################################################
     # REGRESSION MODELS 
     ################################################################################
 
-    print()
-    print('#######################################################################')
-    print('LINEAR REGRESSION')
-    print('#######################################################################')
-    print()
+    if verbose:
+        print()
+        print('#######################################################################')
+        print('LINEAR REGRESSION')
+        print('#######################################################################')
+        print()
 
     linear_reg = LinearRegression()
     linear_reg.fit(X_train, y_train)
     y_pred_linear = linear_reg.predict(X_val)
 
     ols_loss = log_loss(y_pred_linear, y_val)
-    print("Linear regression loss: ")
-    print(ols_loss)
+    if verbose:
+        print("Linear regression loss: ")
+        print(ols_loss)
 
-    print()
-    print('#######################################################################')
-    print('RIDGE REGRESSION')
-    print('#######################################################################')
-    print()
+        print()
+        print('#######################################################################')
+        print('RIDGE REGRESSION')
+        print('#######################################################################')
+        print()
 
     ridge_reg = Ridge(alpha=0.1)
     ridge_reg.fit(X_train, y_train)
     y_pred_ridge = ridge_reg.predict(X_val)
 
     ridge_loss = log_loss(y_pred_ridge, y_val)
-    print("Ridge regression loss: ")
-    print(ridge_loss)
+    if verbose:
+        print("Ridge regression loss: ")
+        print(ridge_loss)
 
-    print()
-    print('#######################################################################')
-    print('LASSO REGRESSION')
-    print('#######################################################################')
-    print()
+        print()
+        print('#######################################################################')
+        print('LASSO REGRESSION')
+        print('#######################################################################')
+        print()
 
     # Increasing default tolerance so the solver converges
     lasso_reg = Lasso(alpha=0.02, tol=0.1)
@@ -141,15 +144,16 @@ def run_models(X_train, y_train, X_val, y_val):
     y_pred_lasso = lasso_reg.predict(X_val)
 
     lasso_loss = log_loss(y_pred_lasso, y_val)
-    print("Lasso regression loss: ")
-    print(lasso_loss)
-    print()
+    if verbose:
+        print("Lasso regression loss: ")
+        print(lasso_loss)
+        print()
 
-    print("Predictions:")
-    print(y_pred_lasso)
+        print("Predictions:")
+        print(y_pred_lasso)
 
-    print("Actual values:")
-    print(y_val)
+        print("Actual values:")
+        print(y_val)
 
     return (ols_loss, ridge_loss, lasso_loss)
 
