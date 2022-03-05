@@ -96,7 +96,7 @@ X_val   = X_val[selected_features]
 print(selected_features)
 '''
 
-def run_models(X_train, y_train, X_val, y_val, verbose=True, cutoff_at_zero=False):
+def run_models(X_train, y_train, X_val, y_val, verbose=True, cutoff_at_zero=False, lasso_alpha=0.02):
     ################################################################################
     # REGRESSION MODELS 
     ################################################################################
@@ -143,7 +143,7 @@ def run_models(X_train, y_train, X_val, y_val, verbose=True, cutoff_at_zero=Fals
         print()
 
     # Increasing default tolerance so the solver converges
-    lasso_reg = Lasso(alpha=0.02, tol=0.1)
+    lasso_reg = Lasso(alpha=lasso_alpha, tol=0.1)
     lasso_reg.fit(X_train, y_train)
     y_pred_lasso = lasso_reg.predict(X_val)
     if cutoff_at_zero:

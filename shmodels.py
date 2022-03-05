@@ -1,8 +1,3 @@
-# PLAN
-
-# Use y from 30 prev days as columns, and then drop the date
-#  Problem: what happens when we predict day 2 of december? Use prediction for day 1?
-
 # Libraries
 import numpy as np
 import pandas as pd
@@ -72,6 +67,9 @@ for county_code in county_list_train:
 
 # Try to fit a separate model on the data for the first county
 ols_sum = ridge_sum = lasso_sum = 0
+best_lasso_alphas = []
+lasso_losses = []
+lasso_alphas_candidates = np.linspace(0, 1, 501)
 for train, val in zip(df_list_train, df_list_val):
     train = train.drop('date', axis=1)
     val   = val.drop('date', axis=1)
@@ -79,13 +77,26 @@ for train, val in zip(df_list_train, df_list_val):
     X_train, y_train = separate_xy(train, 'response')
     X_val, y_val     = separate_xy(val, 'response')
 
-    ols, ridge, lasso = run_models(X_train, y_train, X_val, y_val, verbose=False, cutoff_at_zero=True)
+    min_lasso = 1000
+    best_alpha = 0
+    for alpha in lasso_alphas_candidates[1:]:
+        ols, ridge, lasso = run_models(X_train, y_train, X_val, y_val, verbose=False, cutoff_at_zero=True, lasso_alpha=alpha)
+        if lasso < min_lasso:
+            min_lasso = lasso
+            best_alpha = alpha
+    
     ols_sum += ols
     ridge_sum += ridge
-    lasso_sum += lasso
+    lasso_sum += min_lasso
+    best_lasso_alphas.append(best_alpha)
+    lasso_losses.append(min_lasso)
 
 ols_sum /= len(df_list_train)
 ridge_sum /= len(df_list_train)
 lasso_sum /= len(df_list_train)
 
 print(ols_sum, ridge_sum, lasso_sum)
+
+print(best_lasso_alphas)
+
+print(lasso_losses)
