@@ -13,6 +13,15 @@ def log_loss(y_pred, y_true):
 
     return np.mean(np.abs(np.log(1 + y_true) - np.log(1 + y_pred)))
 
+
+def l1_loss(y_pred, y_true):
+    y_true =  np.array(y_true)
+    y_pred =  np.array(y_pred)
+    assert(len(y_true) == len(y_pred))
+
+    return np.mean(np.abs(y_true -y_pred))
+
+    
 class LinearRegression:
 
     def __init__(self, loss_function, X, y, max_iter):

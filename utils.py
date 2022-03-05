@@ -60,6 +60,24 @@ def train_test_split(df):
 
     return train_df, val_df
 
+COL = 'county'
+DEFAULT_COLS = [
+    'hospital-admissions_smoothed_adj_covid19_from_claims',
+]
+def add_one_hot_and_interactions(df, interaction_cols=DEFAULT_COLS):
+    """
+    function to add the one-hot interaction terms
+    """
+    counties = df['county'].unique().tolist()
+    df = pd.get_dummies(df, prefix=[COL], columns=[COL])
+
+    for col in interaction_cols:
+        for c in counties:
+            colname = f'county_{c}'
+            df[f'county_{c}_{col}'] = df[col] * df[colname]
+
+    return df
+
 ################################################################################
 # FEATURE SELECTION
 ################################################################################
