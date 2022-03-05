@@ -6,14 +6,22 @@ pd.options.mode.chained_assignment = None
 # Code
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from models import log_loss
-from utils import separate_xy, vif_feature_selection, get_corr_features, train_test_split, add_one_hot_and_interactions
-from main import run_models
+from utils import separate_xy, vif_feature_selection, get_corr_features, train_test_split, \
+    add_one_hot_and_interactions, add_shifted_features
+from models import run_models
+
 ################################################################################
 # DATA PRE-PROCESSING
 ################################################################################
 
 # Read the dataset
 df = pd.read_csv('original_train_data.csv')
+
+# Make column to string and add leading zeroes that are removed when reading file
+df['county'] = df['county'].apply(str).str.zfill(5)
+
+# Get the list of unique counties
+county_list = df['county'].unique().tolist()
 
 # Get the list of the columns of the dataframe
 column_list = df.columns.values.tolist()
@@ -22,17 +30,8 @@ column_list.remove('date')
 column_list.remove('county')
 column_list.remove('response')
 
-# Get the shifted features
-for column_name in column_list:
-
-    df['SHIFT_' + column_name] = df[column_name] - df[column_name].shift(1) / df[column_name]
-    df = df.drop(column_name, axis = 1)
-    max_value = df['SHIFT_' + column_name].max()
-    min_value  = df['SHIFT_' + column_name].min()
-    df['SHIFT_' + column_name] = (df['SHIFT_' + column_name] - min_value) / (max_value - min_value)
-
-df = df.dropna(axis=1, how='all')
-df = df.dropna()
+# Add the shifted features
+df = add_shifted_features(df, county_list, column_list)
 
 # Get train data and validation data
 df_train, df_val = train_test_split(df)
@@ -67,9 +66,10 @@ for county_code in county_list_train:
 
 # Try to fit a separate model on the data for the first county
 ols_sum = ridge_sum = lasso_sum = 0
-best_lasso_alphas = []
 lasso_losses = []
-lasso_alphas_candidates = np.linspace(0, 1, 501)
+
+from constant import best_lasso_alphas
+i = 0
 for train, val in zip(df_list_train, df_list_val):
     train = train.drop('date', axis=1)
     val   = val.drop('date', axis=1)
@@ -77,26 +77,19 @@ for train, val in zip(df_list_train, df_list_val):
     X_train, y_train = separate_xy(train, 'response')
     X_val, y_val     = separate_xy(val, 'response')
 
-    min_lasso = 1000
-    best_alpha = 0
-    for alpha in lasso_alphas_candidates[1:]:
-        ols, ridge, lasso = run_models(X_train, y_train, X_val, y_val, verbose=False, cutoff_at_zero=True, lasso_alpha=alpha)
-        if lasso < min_lasso:
-            min_lasso = lasso
-            best_alpha = alpha
+    alpha = best_lasso_alphas[i]
+    ols, ridge, lasso = run_models(X_train, y_train, X_val, y_val, verbose=False, cutoff_at_zero=True, lasso_alpha=alpha)
     
     ols_sum += ols
     ridge_sum += ridge
-    lasso_sum += min_lasso
-    best_lasso_alphas.append(best_alpha)
-    lasso_losses.append(min_lasso)
+    lasso_sum += lasso
+    lasso_losses.append(lasso)
+    i += 1
 
 ols_sum /= len(df_list_train)
 ridge_sum /= len(df_list_train)
 lasso_sum /= len(df_list_train)
 
 print(ols_sum, ridge_sum, lasso_sum)
-
-print(best_lasso_alphas)
 
 print(lasso_losses)
