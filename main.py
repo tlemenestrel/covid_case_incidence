@@ -33,7 +33,7 @@ for column_name in column_list:
 
 df = df.dropna(axis=1, how='all')
 df = df.dropna()
-df = df[df.county != 1073]
+# df = df[df.county != 1073]
 
 print(df.head())
 df.to_csv('df.csv')
@@ -59,7 +59,7 @@ county_list_val   = df_val['county'].unique()
 print(county_list_train)
 print(county_list_val)
 assert(len(county_list_train) == len(county_list_val))
-assert(all(county_list_train  == county_list_val))
+assert(set(county_list_train)  == set(county_list_val))
 
 # Make lists to store the sub-dataframes
 df_list_train = []
@@ -96,7 +96,7 @@ X_val   = X_val[selected_features]
 print(selected_features)
 '''
 
-def run_models(X_train, y_train, X_val, y_val, verbose=True):
+def run_models(X_train, y_train, X_val, y_val, verbose=True, cutoff_at_zero=False):
     ################################################################################
     # REGRESSION MODELS 
     ################################################################################
@@ -111,6 +111,8 @@ def run_models(X_train, y_train, X_val, y_val, verbose=True):
     linear_reg = LinearRegression()
     linear_reg.fit(X_train, y_train)
     y_pred_linear = linear_reg.predict(X_val)
+    if cutoff_at_zero:
+        y_pred_linear[y_pred_linear < 0] = 0
 
     ols_loss = log_loss(y_pred_linear, y_val)
     if verbose:
@@ -126,6 +128,8 @@ def run_models(X_train, y_train, X_val, y_val, verbose=True):
     ridge_reg = Ridge(alpha=0.1)
     ridge_reg.fit(X_train, y_train)
     y_pred_ridge = ridge_reg.predict(X_val)
+    if cutoff_at_zero:
+       y_pred_ridge[y_pred_ridge < 0] = 0
 
     ridge_loss = log_loss(y_pred_ridge, y_val)
     if verbose:
@@ -142,6 +146,8 @@ def run_models(X_train, y_train, X_val, y_val, verbose=True):
     lasso_reg = Lasso(alpha=0.02, tol=0.1)
     lasso_reg.fit(X_train, y_train)
     y_pred_lasso = lasso_reg.predict(X_val)
+    if cutoff_at_zero:
+       y_pred_lasso[y_pred_lasso < 0] = 0
 
     lasso_loss = log_loss(y_pred_lasso, y_val)
     if verbose:
