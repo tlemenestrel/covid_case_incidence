@@ -3,3 +3,4 @@ env/
 myenv/
 .ipynb_checkpoints/
 .idea/
+.DS_Store
