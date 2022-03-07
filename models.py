@@ -190,7 +190,7 @@ def run_models(X_train, y_train, X_val, y_val, verbose=True, cutoff_at_zero=Fals
         print('#######################################################################')
         print()
 
-    ridge_reg = Ridge(alpha=0.1)
+    ridge_reg = Ridge(alpha=0.0001)
     ridge_reg.fit(X_train, y_train)
     y_pred_ridge = ridge_reg.predict(X_val)
     if cutoff_at_zero:
@@ -221,7 +221,7 @@ def run_models(X_train, y_train, X_val, y_val, verbose=True, cutoff_at_zero=Fals
         print()
 
         print("Predictions:")
-        print(y_pred_lasso)
+        print(y_pred_linear)
 
         print("Actual values:")
         print(y_val)

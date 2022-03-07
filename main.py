@@ -26,16 +26,21 @@ column_list.remove('date')
 column_list.remove('county')
 column_list.remove('response')
 
-# Add the shifted features
-df = add_shifted_features(df, county_list, column_list)
-
 print(df.head())
-df.to_csv('df.csv')
+
+# Add the shifted features
+#df = add_shifted_features(df, county_list, column_list)
+#df.to_csv('df.csv')
 
 # Get train data and validation data
 df_train, df_val = train_test_split(df)
 
+df_train = df_train.drop('date', axis=1)
+
+df_val = df_val.drop('date', axis=1)
+
 print(df_train.head())
+
 ################################################################################
 # SPLITTING DATA
 ################################################################################
@@ -48,16 +53,21 @@ df_list_val   = []
 for county_code in county_list:
 
     train_sub_df = df_train.loc[df_train['county'] == county_code]
+    correlated_features = get_corr_features(train_sub_df, 'response', 0.3)
+    train_sub_df = train_sub_df[correlated_features]
     df_list_train.append(train_sub_df)
 
     val_sub_df   = df_val.loc[df_val['county'] == county_code]
+    val_sub_df   = val_sub_df[correlated_features]
+
     df_list_val.append(val_sub_df)
 
 # Try to fit a separate model on the data for the first county
-df_list_train[0] = df_list_train[0].drop('date', axis=1)
-df_list_val[0]   = df_list_val[0].drop('date', axis=1)
+#df_list_train[0] = df_list_train[0].drop('date', axis=1)
+#df_list_val[0]   = df_list_val[0].drop('date', axis=1)
 
 print(df_list_train[0].head())
+
 '''
 correlated_features = get_corr_features(df_list_train[0], 'response', 0.5)
 df_list_train[0] = df_list_train[0][correlated_features]
@@ -65,8 +75,11 @@ df_list_val[0]   = df_list_val[0][correlated_features]
 print(correlated_features)
 '''
 
-X_train, y_train = separate_xy(df_list_train[0], 'response')
-X_val, y_val     = separate_xy(df_list_val[0], 'response')
+X_train, y_train = separate_xy(df_train, 'response')
+X_val, y_val     = separate_xy(df_val, 'response')
+
+print(X_train)
+print(y_train)
 
 '''
 selected_features = vif_feature_selection(X_train, 10)
@@ -75,4 +88,4 @@ X_val   = X_val[selected_features]
 print(selected_features)
 '''
 
-run_models(X_train, y_train, X_val, y_val, cutoff_at_zero=True)
+run_models(X_train, y_train, X_val, y_val, cutoff_at_zero=True, lasso_alpha=0.01)

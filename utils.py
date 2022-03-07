@@ -78,29 +78,30 @@ def add_one_hot_and_interactions(df, interaction_cols=DEFAULT_COLS):
 
     return df
 
-
-def add_shifted_features(df, county_list, column_list):
+def add_shifted_features(dataframe, county_list, column_list):
     print('-> Adding shifted features...')
-    # Get the shifted features
-    eps = 0.0001 # to avoid division by 0
+    county_df_list = []
     for county in county_list:
-        county_df = df[df['county'] == county]    
+
+        # Create a separate dataframe for each county
+        county_df = dataframe[dataframe['county'] == county]
+
         for column_name in column_list:
-            df.loc[df['county'] == county, 'SHIFTED_' + column_name] = county_df[column_name].shift(1)
-            df.loc[df['county'] == county, 'SHIFT_' + column_name] = county_df[column_name] - county_df[column_name].shift(1) / (county_df[column_name] + eps)
-            county_df_column = df[df['county'] == county]['SHIFT_' + column_name]
-            max_value = county_df_column.max()
-            min_value  = county_df_column.min()
-            df.loc[df['county'] == county, 'SHIFT_' + column_name] = (county_df_column - min_value) / (max_value - min_value + eps)
-    for column_name in column_list:
-        df = df.drop(column_name, axis = 1)
+            # Create the new shifted column
+            county_df['SHIFT_' + column_name] = county_df[column_name].pct_change(periods=3)
+            # Drop the previous one
+            county_df = county_df.drop(column_name, axis = 1)
+
+        county_df = county_df.dropna()
+        county_df_list.append(county_df)
 
     print('--> Shifted features added!')
 
-    df = df.dropna(axis=1, how='all')
-    df = df.dropna()
-
-    return df
+    data = pd.concat(county_df_list)
+    data.replace([np.inf, -np.inf], np.nan, inplace=True)
+    data = data.dropna()
+    data = data.sort_values(by=['date', 'county'])
+    return data
 
 ################################################################################
 # FEATURE SELECTION
