@@ -33,6 +33,38 @@ def select(treshold, method):
 
     return final_df
 
+def select_all(treshold):
+    assert(method in ['shift', 'diff', 'pct_change'])
+    df_all = pd.read_csv('train_data.csv', index_col='Unnamed: 0')
+    df_all['date'] = pd.to_datetime(df_all['date'])
+    feat_labels = df_all.columns[2:-1]
+
+
+    lag_l = list(range(21))
+    res = pd.DataFrame( index=df_all.index)
+
+
+    for county in np.unique(df_all.county):
+        df_all_county = df_all[df_all.county == county]
+        df_all_county = df_all_county.drop('county', axis=1)
+
+        for f in feat_labels:
+            for lagg in lag_l:
+                if method == 'shift':
+                    res[f+'_'+method+'_'+str(lagg)] = df_all_county[f].shift(lagg)
+                elif method == 'diff':
+                    cor = df_all_county[f].diff(lagg)
+                else:
+                    cor = df_all_county[f].pct_change(lagg)
+
+            res.loc[county, f] = cor
+
+    all_lag[lagg] = res.abs().mean()
+
+    final_df = all_lag.idxmax(axis=1)[all_lag.max(axis=1) > treshold]
+
+    return final_df
+
 
 def construct_feat_matrix(method):
     assert (method in ['shift', 'diff', 'pct_change'])
