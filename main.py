@@ -5,32 +5,91 @@ pd.options.mode.chained_assignment = None
 
 from utils import separate_xy, vif_feature_selection, get_corr_features, train_test_split, \
     add_one_hot_and_interactions, add_shifted_features
-from models import run_models
+from sklearn.linear_model import ElasticNet
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from models import log_loss
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.model_selection import train_test_split
+from time_based_cv import TimeBasedCV
+import pandas as pd
+import datetime
+from datetime import datetime as dt
+from dateutil.relativedelta import *
+from warnings import simplefilter
+from sklearn.exceptions import ConvergenceWarning
+simplefilter("ignore", category=ConvergenceWarning)
+simplefilter("ignore", category=UserWarning)
+
+
 ################################################################################
 # DATA PRE-PROCESSING
 ################################################################################
 
 # Read the dataset
 df = pd.read_csv('original_train_data.csv')
+df['date'] = pd.to_datetime(df['date'])
 
-# Make column to string and add leading zeroes that are removed when reading file
-df['county'] = df['county'].apply(str).str.zfill(5)
+X, y  = separate_xy(df, 'response')
 
-# Get the list of unique counties
-county_list = df['county'].unique().tolist()
+################################################################################
+# PARAMETERS FOR CV
+################################################################################
 
-# Get the list of the columns of the dataframe
-column_list = df.columns.values.tolist()
-column_list.remove('Unnamed: 0')
-column_list.remove('date')
-column_list.remove('county')
-column_list.remove('response')
+tscv = TimeBasedCV(train_period=30,
+                   test_period=7,
+                   freq='days')
 
-print(df.head())
+split_date = datetime.date(2020, 11, 1)
+for train_index, test_index in tscv.split(df, validation_split_date=split_date, date_column='date'):
+    continue
 
-# Add the shifted features
-#df = add_shifted_features(df, county_list, column_list)
-#df.to_csv('df.csv')
+# get number of splits
+tscv.get_n_splits()
+print(tscv.get_n_splits())
+
+# Make a list to store all the alphas
+alphas = []
+for alpha in np.linspace(0, 15, 300):
+    alphas.append(alpha)
+
+# Make a dictionnary of lists to store the CV scores for each alpha and for each fold
+alpha_dict = { i : [] for i in alphas}
+
+################################################################################
+# TIME-BASED CV
+################################################################################
+
+for train_index, test_index in tscv.split(X, validation_split_date=datetime.date(2020, 11, 1)):
+
+    # Split the data
+    X_train   = X.loc[train_index].drop('date', axis=1)
+    y_train = y.loc[train_index]
+
+    X_test    = X.loc[test_index].drop('date', axis=1)
+    y_test  = y.loc[test_index]
+
+    # For each value of the hyperparamter alpha
+    for alpha in alphas:
+        # Make model, fit and make predictions
+        model = make_pipeline(StandardScaler(), ElasticNet(random_state=0, alpha=alpha, l1_ratio=1))
+        y_pred = model.fit(X_train, y_train).predict(X_test)
+
+        # Compute loss
+        loss = log_loss(y_pred, y_test)
+
+        # Add the loss to the corresponding alpha list in the dictionnary
+        alpha_dict[alpha].append(loss)
+
+# Compute the average loss for each alpha in the dictionnary
+for key in alpha_dict.keys():
+    alpha_dict[key] = np.mean(alpha_dict[key])
+
+# Compute t
+lowest_average_loss = min(alpha_dict.values())
+best_alpha = [k for k, v in alpha_dict.items() if v == lowest_average_loss]
+print("Lowest average loss after CV: " + str(lowest_average_loss))
+print("Best alpha after CV: " + str(best_alpha))
 
 # Get train data and validation data
 df_train, df_val = train_test_split(df)
@@ -41,51 +100,13 @@ df_val = df_val.drop('date', axis=1)
 
 print(df_train.head())
 
-################################################################################
-# SPLITTING DATA
-################################################################################
-
-# Make lists to store the sub-dataframes
-df_list_train = []
-df_list_val   = []
-
-# Slice the train and val dataframe into lists of sub dataframes for each county.
-for county_code in county_list:
-
-    train_sub_df = df_train.loc[df_train['county'] == county_code]
-    correlated_features = get_corr_features(train_sub_df, 'response', 0.3)
-    train_sub_df = train_sub_df[correlated_features]
-    df_list_train.append(train_sub_df)
-
-    val_sub_df   = df_val.loc[df_val['county'] == county_code]
-    val_sub_df   = val_sub_df[correlated_features]
-
-    df_list_val.append(val_sub_df)
-
-# Try to fit a separate model on the data for the first county
-#df_list_train[0] = df_list_train[0].drop('date', axis=1)
-#df_list_val[0]   = df_list_val[0].drop('date', axis=1)
-
-print(df_list_train[0].head())
-
-'''
-correlated_features = get_corr_features(df_list_train[0], 'response', 0.5)
-df_list_train[0] = df_list_train[0][correlated_features]
-df_list_val[0]   = df_list_val[0][correlated_features]
-print(correlated_features)
-'''
-
 X_train, y_train = separate_xy(df_train, 'response')
 X_val, y_val     = separate_xy(df_val, 'response')
 
-print(X_train)
-print(y_train)
+model = make_pipeline(StandardScaler(), ElasticNet(random_state=0, alpha=best_alpha, l1_ratio=1))
 
-'''
-selected_features = vif_feature_selection(X_train, 10)
-X_train = X_train[selected_features]
-X_val   = X_val[selected_features]
-print(selected_features)
-'''
+model.fit(X_train, y_train)
+y_pred = model.predict(X_val)
+lasso_loss = log_loss(y_pred, y_val)
 
-run_models(X_train, y_train, X_val, y_val, cutoff_at_zero=True, lasso_alpha=0.01)
+print(lasso_loss)
