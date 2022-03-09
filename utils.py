@@ -51,7 +51,7 @@ def train_test_split(df):
 
     threshold_date = datetime(2020, 11, 1)
     # Shift the index by 1
-    df.index += 1     
+    #df.index += 1     
     df['date'] = pd.to_datetime(df['date'])
 
     train_df, val_df = df[df.date<threshold_date], df[df.date>=threshold_date]
@@ -64,6 +64,7 @@ COL = 'county'
 DEFAULT_COLS = [
     'hospital-admissions_smoothed_adj_covid19_from_claims',
 ]
+
 def add_one_hot_and_interactions(df, interaction_cols=DEFAULT_COLS):
     """
     function to add the one-hot interaction terms
@@ -78,7 +79,7 @@ def add_one_hot_and_interactions(df, interaction_cols=DEFAULT_COLS):
 
     return df
 
-def add_shifted_features(dataframe, county_list, column_list):
+def add_shifted_features(dataframe, county_list, column_list, periods):
     print('-> Adding shifted features...')
     county_df_list = []
     for county in county_list:
@@ -88,18 +89,18 @@ def add_shifted_features(dataframe, county_list, column_list):
 
         for column_name in column_list:
             # Create the new shifted column
-            county_df['SHIFT_' + column_name] = county_df[column_name].pct_change(periods=3)
+            county_df['SHIFT_' + str(periods) + '_' + column_name] = county_df[column_name].pct_change(periods)
             # Drop the previous one
-            county_df = county_df.drop(column_name, axis = 1)
+            #county_df = county_df.drop(column_name, axis = 1)
 
-        county_df = county_df.dropna()
+        #county_df = county_df.dropna()
         county_df_list.append(county_df)
 
     print('--> Shifted features added!')
 
     data = pd.concat(county_df_list)
-    data.replace([np.inf, -np.inf], np.nan, inplace=True)
-    data = data.dropna()
+    #data.replace([np.inf, -np.inf], np.nan, inplace=True)
+    #data = data.dropna(axis='columns')
     data = data.sort_values(by=['date', 'county'])
     return data
 
