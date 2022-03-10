@@ -79,30 +79,80 @@ def add_one_hot_and_interactions(df, interaction_cols=DEFAULT_COLS):
 
     return df
 
-def add_shifted_features(dataframe, county_list, column_list, periods):
-    print('-> Adding shifted features...')
-    county_df_list = []
-    for county in county_list:
+# def add_shifted_features(dataframe, county_list, column_list, periods):
+#     print('-> Adding shifted features...')
+#     county_df_list = []
+#     for county in county_list:
 
-        # Create a separate dataframe for each county
-        county_df = dataframe[dataframe['county'] == county]
+#         # Create a separate dataframe for each county
+#         county_df = dataframe[dataframe['county'] == county]
 
-        for column_name in column_list:
-            # Create the new shifted column
-            county_df['SHIFT_' + str(periods) + '_' + column_name] = county_df[column_name].pct_change(periods)
-            # Drop the previous one
-            #county_df = county_df.drop(column_name, axis = 1)
+#         for column_name in column_list:
+#             # Create the new shifted column
+#             county_df['SHIFT_' + str(periods) + '_' + column_name] = county_df[column_name].pct_change(periods)
+#             # Drop the previous one
+#             #county_df = county_df.drop(column_name, axis = 1)
 
-        #county_df = county_df.dropna()
-        county_df_list.append(county_df)
+#         #county_df = county_df.dropna()
+#         county_df_list.append(county_df)
 
-    print('--> Shifted features added!')
+#     print('--> Shifted features added!')
 
-    data = pd.concat(county_df_list)
-    #data.replace([np.inf, -np.inf], np.nan, inplace=True)
-    #data = data.dropna(axis='columns')
-    data = data.sort_values(by=['date', 'county'])
-    return data
+#     data = pd.concat(county_df_list)
+#     #data.replace([np.inf, -np.inf], np.nan, inplace=True)
+#     #data = data.dropna(axis='columns')
+#     data = data.sort_values(by=['date', 'county'])
+#     return data
+DEFAULT_COLS_FOR_LAG = ['chng_smoothed_adj_outpatient_cli',
+       'chng_smoothed_adj_outpatient_covid', 'chng_smoothed_outpatient_cli',
+       'chng_smoothed_outpatient_covid', 'doctor-visits_smoothed_adj_cli',
+       'doctor-visits_smoothed_cli', 'fb-survey_smoothed_cli',
+       'fb-survey_smoothed_hh_cmnty_cli', 'fb-survey_smoothed_ili',
+       'fb-survey_smoothed_nohh_cmnty_cli',
+       'fb-survey_smoothed_travel_outside_state_5d', 'fb-survey_smoothed_wcli',
+       'fb-survey_smoothed_whh_cmnty_cli', 'fb-survey_smoothed_wili',
+       'fb-survey_smoothed_wnohh_cmnty_cli',
+       'fb-survey_smoothed_wtravel_outside_state_5d',
+       'hospital-admissions_smoothed_adj_covid19_from_claims',
+       'hospital-admissions_smoothed_covid19_from_claims',
+       'quidel_covid_ag_smoothed_pct_positive', 'safegraph_bars_visit_num',
+       'safegraph_bars_visit_prop', 'safegraph_completely_home_prop',
+       'safegraph_completely_home_prop_7dav', 'safegraph_full_time_work_prop',
+       'safegraph_full_time_work_prop_7dav',
+       'safegraph_median_home_dwell_time',
+       'safegraph_median_home_dwell_time_7dav',
+       'safegraph_part_time_work_prop', 'safegraph_part_time_work_prop_7dav',
+       'safegraph_restaurants_visit_num', 'safegraph_restaurants_visit_prop',]
+def add_lagged_features(df, columns=DEFAULT_COLS_FOR_LAG, n_days=21, counties=None, types=['shift', 'diff', 'pct'], dropna=True):
+    """
+    Add shifted features to dataframe for specified number of days
+    WARNING: Assumes a structured df (i.e. county data are separated exactly 100 rows apart)
+    """
+    # Validate df structure assumption
+    temp = df['county']
+    for i in range(len(all_counties)):
+        county = all_counties[i]
+        for j in range(180):
+            if temp[i+100*j] != county:
+                raise Exception(f'error on county {county}, i {i} and j {j}')
+    # Set counties
+    if not counties:
+        counties = df['county'].unique().tolist()
+    # Make the shifts
+    stripped_df = df[columns]
+    for day in range(1, n_days+1):
+        temp = stripped_df.shift(100*day)
+        for col in columns:
+            if 'shift' in types:
+                df[f'SHIFT_{col}_{day}'] = temp[col]
+            if 'diff' in types:
+                df[f'DIFF_{col}_{day}'] = df[col] - temp[col]
+            if 'pct' in types:
+                df[f'PCT_{col}_{day}'] = (df[col] - temp[col]) / (temp[col] + 0.0001) # so that we don't have division by 0
+    
+    if dropna:
+        df = df.dropna()
+    return df
 
 ################################################################################
 # FEATURE SELECTION
