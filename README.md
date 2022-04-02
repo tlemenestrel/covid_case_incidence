@@ -1,3 +1,3 @@
 # Covid Case Incidence
 
-![Paper](./README.pdf)
+![Image-1](./README-1.png)
